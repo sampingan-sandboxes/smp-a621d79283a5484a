@@ -1,0 +1,56 @@
+service: smp-playbook-sandbox
+
+frameworkVersion: '3'
+
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  environment:
+    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID, ''}
+    COGNITO_APP_CLIENT_ID: ${env:COGNITO_APP_CLIENT_ID, ''}
+    COGNITO_REGION: ${env:COGNITO_REGION, 'ap-southeast-1'}
+    MONGODB_URI: ${env:MONGODB_URI, ''}
+    MONGODB_NAME: ${env:MONGODB_NAME, 'playbook'}
+    COMPOSIO_API_KEY: ${env:COMPOSIO_API_KEY, ''}
+    ANTHROPIC_API_KEY: ${env:ANTHROPIC_API_KEY, ''}
+    PLAYBOOK_PROCESSOR_FUNCTION_NAME: ${env:PLAYBOOK_PROCESSOR_FUNCTION_NAME, ''}
+
+plugins:
+  - serverless-esbuild
+  - serverless-offline
+
+functions:
+  health:
+    handler: src/base/handlers/health.handler
+    events:
+      - httpApi:
+          path: /health
+          method: get
+
+  triggers:
+    handler: src/components/playbook/handlers/triggers.handler
+    events:
+      - httpApi:
+          path: /triggers
+          method: get
+
+  # Invoked asynchronously (InvocationType 'Event') by the connectors webhook, never
+  # behind API Gateway — so it has no httpApi event.
+  playbookProcessorWorker:
+    handler: src/components/playbook/handlers/playbookProcessorWorker.handler
+
+  playbookRunsList:
+    handler: src/components/playbook/handlers/playbookRunsList.handler
+    events:
+      - httpApi:
+          path: /playbooks/{id}/runs
+          method: get
+
+  playbookRunsGet:
+    handler: src/components/playbook/handlers/playbookRunsGet.handler
+    events:
+      - httpApi:
+          path: /playbooks/{id}/runs/{runId}
+          method: get
